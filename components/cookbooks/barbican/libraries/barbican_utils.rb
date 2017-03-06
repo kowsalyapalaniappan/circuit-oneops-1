@@ -5,11 +5,10 @@ module BarbicanUtils
 
     cloud_name = node[:workorder][:cloud][:ciName]
     Chef::Log.info("Cloud Name: #{cloud_name}")
-
     # get the service information
-    if node[:workorder][:services].has_key?('key-management')
-      Chef::Log.info("Key Management Service is: #{node[:workorder][:services]['key-management']}")
-      barbican_attributes = node[:workorder][:services]['key-management'][cloud_name][:ciAttributes]
+    if node[:workorder][:services].has_key?('keymanagement')
+      Chef::Log.info("Key Management Service is: #{node[:workorder][:services][:keymanagement]}")
+      barbican_attributes = node[:workorder][:services][:keymanagement][cloud_name][:ciAttributes]
       service_hash[:openstack_auth_url] = barbican_attributes[:endpoint]
       service_hash[:openstack_username] = barbican_attributes[:username]
       service_hash[:openstack_api_key] = barbican_attributes[:password]
@@ -26,29 +25,32 @@ module BarbicanUtils
     # get the certificate information information
     certificate_attributes = node[:workorder][:rfcCi][:ciAttributes]
     ciName = node[:workorder][:rfcCi][:ciName]
-    Chef::Log.info("certificate attribute:")
-    Chef::Log.info(certificate_attributes.inspect)
     secret_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:cert]
     secret_hash[:secret_name] = ciName +"_certificate"
     secret_hash[:secret_ref] = ""
+    Chef::Log.info("secret name: #{secret_hash[:secret_name]}, secret_content: #{secret_hash[:content]}")
     secrets.push(secret_hash)
 
     secret_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:cacertkey]
     secret_hash[:secret_name] = ciName+"_intermediate"
+    Chef::Log.info("secret name: #{secret_hash[:secret_name]}, secret_content: #{secret_hash[:content]}")
 
     secrets.push(secret_hash)
 
 
     secret_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:key]
     secret_hash[:secret_name] = ciName+"_privatekey"
+    Chef::Log.info("secret name: #{secret_hash[:secret_name]}, secret_content: #{secret_hash[:content]}")
 
     secrets.push(secret_hash)
 
     secret_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:passphrase]
     secret_hash[:secret_name] = ciName+"_privatekey_passphrase"
+    Chef::Log.info("secret name: #{secret_hash[:secret_name]}, secret_content: #{secret_hash[:content]}")
 
     secrets.push(secret_hash)
-
+    node.set["secrets_hash"] =  secrets
+    node.set["cert_container_name"] = ciName + "cert_container_name"
     secrets
   end
 

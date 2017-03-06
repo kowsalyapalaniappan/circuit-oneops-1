@@ -79,3 +79,15 @@ service 'swift',
             :password => '',
             :regionname => ''
         }
+
+service 'barbican',
+        :description => 'Key Management Service',
+        :cookbook => 'barbican',
+        :source => [Chef::Config[:register], Chef::Config[:version].split(".").first].join('.'),
+        :provides => {:service => 'keymanagement'},
+        :attributes => {
+            :endpoint => '',
+            :tenant => '',
+            :username => '',
+            :password => '',
+        }

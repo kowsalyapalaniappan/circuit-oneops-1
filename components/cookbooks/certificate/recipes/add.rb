@@ -1,5 +1,5 @@
 require 'date'
-
+#raise "certificate::add stopping ..."
 cloud_name = node[:workorder][:cloud][:ciName]
 provider = ""
 auto_provision = node.workorder.rfcCi.ciAttributes.auto_provision
@@ -17,6 +17,11 @@ expires_on = node[:expiry_time]
 if !auto_provision.nil? && auto_provision == "true" && !provider.nil? && !provider.empty?
 	include_recipe provider + "::add_certificate" 
 	expires_on = node[:expiry_time]
+end
+
+#if key-managment service barbican is present in the workload , invoke the barbican::add recipe here
+if node[:workorder][:services].has_key?("keymanagement")
+  include_recipe "barbican::add"
 end
 
 expires_in_value_changed = false
