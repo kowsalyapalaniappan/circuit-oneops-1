@@ -10,7 +10,7 @@ resource "lb",
   :except => [ 'single' ],
   :design => true,
   :cookbook => "oneops.1.lb",
-  :requires => { "constraint" => "1..1", "services" => "compute,lb,*slb,dns" },
+  :requires => { "constraint" => "1..1", "services" => "compute,lb,*slb,dns,*keymanagement" },
   :attributes => {
     "stickiness"    => ""
   },
@@ -57,7 +57,7 @@ resource "lb",
 resource "lb-certificate",
   :cookbook => "oneops.1.certificate",
   :design => true,
-  :requires => { "constraint" => "0..1", 'services' => '*certificate,*keymanagement' },
+  :requires => { "constraint" => "0..1", 'services' => '*certificate' },
   :attributes => {}
 
 

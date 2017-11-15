@@ -33,6 +33,18 @@ lb_name = node[:lb_name]
 
 config_items_changed= node[:workorder][:rfcCi][:ciBaseAttributes] # config_items_changed is empty if there no configuration change in lb component
 
+#if key-management service barbican is present in the workload , invoke the barbican::update recipe here
+if node[:workorder][:services].has_key?("keymanagement")
+  certificate_payload = node.workorder.payLoad.DependsOn.select { |d| d[:ciClassName] =~ /Certificate/ }
+  certificate_payload.each do |cert|
+    if cert[:rfcAction] == "replace"
+      include_recipe "barbican::replace"
+    elsif cert[:rfcAction] == "update"
+      include_recipe "barbican::update"
+    end
+  end
+end
+
 lb_manager = LoadbalancerManager.new(tenant)
 listeners_manager = ListenerManager.new(tenant)
 
@@ -45,7 +57,7 @@ begin
     #handle changes in listeners only
 
     if config_items_changed.has_key?("listeners")
-      #ciBaseAtrribute had old config setting, while ciAttriutes new config changes
+      #ciBaseAtrribute had old config setting, while ciAttributes new config changes
       old = JSON.parse(node[:workorder][:rfcCi][:ciBaseAttributes][:listeners])
       new = JSON.parse(node[:workorder][:rfcCi][:ciAttributes][:listeners])
       #compare ciBaseAttribute and ciAttribute in WorkOrder to get the exact changes made by the user

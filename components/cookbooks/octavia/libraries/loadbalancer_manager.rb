@@ -24,33 +24,42 @@ class LoadbalancerManager
 
   def create_loadbalancer(loadbalancer)
     is_exist = @loadbalancer_dao.is_exist_loadbalancer(loadbalancer.label.name)
+    begin
+        if !is_exist
+          Chef::Log.info("Creating loadbalancer #{loadbalancer.label.name} ... ")
+          loadbalancer_id = @loadbalancer_dao.create_loadbalancer(loadbalancer)
 
-    if !is_exist
-      Chef::Log.info("Creating loadbalancer #{loadbalancer.label.name} ... ")
-      loadbalancer_id = @loadbalancer_dao.create_loadbalancer(loadbalancer)
-
-      if !loadbalancer_id.nil?
-        loadbalancer.listeners.each do |listener|
-          Chef::Log.info("Adding listener to loadbalancer:#{loadbalancer.label.name} ... ")
-          listener_id = @listener_dao.create_listener(loadbalancer_id, listener)
-          Chef::Log.info("Adding pool to listener id:#{listener_id} ... ")
-          pool_id = @pool_dao.create_pool(loadbalancer_id, listener_id, listener.pool)
-          Chef::Log.info("Adding members to pool id:#{pool_id} ... ")
-          listener.pool.members.each do |member|
-            @member_dao.create_member(loadbalancer_id, pool_id, member)
+          if !loadbalancer_id.nil?
+            loadbalancer.listeners.each do |listener|
+              Chef::Log.info("Adding listener to loadbalancer:#{loadbalancer.label.name} ... ")
+              listener_id = @listener_dao.create_listener(loadbalancer_id, listener)
+              Chef::Log.info("Adding pool to listener id:#{listener_id} ... ")
+              pool_id = @pool_dao.create_pool(loadbalancer_id, listener_id, listener.pool)
+              Chef::Log.info("Adding members to pool id:#{pool_id} ... ")
+              listener.pool.members.each do |member|
+                @member_dao.create_member(loadbalancer_id, pool_id, member)
+              end
+              Chef::Log.info("Adding health monitor to pool id:#{pool_id} ... ")
+              @health_monitor_dao.create_health_monitor(loadbalancer_id, pool_id, listener.pool.health_monitor)
+            end
           end
-          Chef::Log.info("Adding health monitor to pool id:#{pool_id} ... ")
-          @health_monitor_dao.create_health_monitor(loadbalancer_id, pool_id, listener.pool.health_monitor)
+        else
+          raise("Cannot create Loadbalancer #{loadbalancer.label.name} already exist.")
         end
+    rescue Exception => e
+      Chef::Log.error(e.message)
+      if e.message =~ /already exist./
+        raise("Cannot create Loadbalancer #{loadbalancer.label.name} already exist.")
       end
-    else
-      raise("Cannot create Loadbalancer #{loadbalancer.label.name} already exist.")
+      Chef::Log.error(e.backtrace.inspect)
+      delete_loadbalancer(loadbalancer.label.name)
+      raise("Cannot create Loadbalancer #{loadbalancer.label.name} due to an error, cleaning up the lb,pools etc ..,")
     end
 
     lb_id = @loadbalancer_dao.get_loadbalancer_id(loadbalancer.label.name)
     loadbalancer = @loadbalancer_dao.get_loadbalancer(lb_id)
     if  loadbalancer.provisioning_status == "ERROR"
-      delete_loadbalancer(loadbalancer.label.name)
+       delete_loadbalancer(loadbalancer.label.name)
       raise("Cannot create Loadbalancer #{loadbalancer.label.name} due to unknown error, deleted the lb in ERROR state.")
     end
 

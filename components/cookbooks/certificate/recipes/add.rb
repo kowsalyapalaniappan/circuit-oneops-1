@@ -18,10 +18,6 @@ if !auto_provision.nil? && auto_provision == "true" && !provider.nil? && !provid
 	expires_on = node[:expiry_time]
 end
 
-#if key-managment service barbican is present in the workload , invoke the barbican::add recipe here
-if node[:workorder][:services].has_key?("keymanagement")
-  include_recipe "barbican::add"
-end
 
 expires_in_value_changed = false
 

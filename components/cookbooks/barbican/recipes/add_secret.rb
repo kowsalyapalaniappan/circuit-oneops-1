@@ -1,6 +1,5 @@
 require File.expand_path('../../libraries/barbican_utils.rb', __FILE__)
 
-
 secrets = get_secrets_wo()
 user_list = Array.new
 user_list.push("neutron")

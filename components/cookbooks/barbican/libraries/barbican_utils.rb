@@ -23,11 +23,33 @@
   def get_secrets_wo()
     secrets = []
     # get the certificate information information
-    certificate_attributes = node[:workorder][:rfcCi][:ciAttributes]
-    ciID = (node[:workorder][:rfcCi][:ciId]).to_s
-    cert_hash = {}
-    if !node[:workorder][:rfcCi][:ciAttributes][:cert].nil? && !node[:workorder][:rfcCi][:ciAttributes][:cert].empty?
-      cert_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:cert]
+
+    certificate_payload = node.workorder.payLoad.DependsOn.select { |d| d[:ciClassName] =~ /Certificate/ }
+    certificate_payload.each do |cert|
+      cacert_key = cert[:ciAttributes][:cacertkey]
+      cert_content = cert[:ciAttributes][:cert]
+      cert_key = cert[:ciAttributes][:key]
+      cert_passphrase = cert[:ciAttributes][:passphrase]
+      ciID = cert[:ciId].to_s
+
+      Chef::Log.info("cacert_key:")
+      Chef::Log.info(cacert_key)
+
+      Chef::Log.info("CERT_CONTENT:")
+      Chef::Log.info(cert_content)
+
+      Chef::Log.info("CERT_KEY:")
+      Chef::Log.info(cert_key)
+
+      Chef::Log.info("PASSPHRASE:")
+      Chef::Log.info(cert_passphrase)
+
+      Chef::Log.info("ciID:")
+      Chef::Log.info(ciID)
+
+      cert_hash = {}
+    if !cert_content.nil? && !cert_content.empty?
+      cert_hash[:content] = cert_content
       cert_hash[:secret_name] = ciID + "_certificate"
       secrets.push(cert_hash)
     else
@@ -35,8 +57,8 @@
     end
 
     chain_hash = {}
-    if !node[:workorder][:rfcCi][:ciAttributes][:cacertkey].nil? && !node[:workorder][:rfcCi][:ciAttributes][:cacertkey].empty?
-      chain_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:cacertkey]
+    if !cacert_key.nil? && !cacert_key.empty?
+      chain_hash[:content] = cacert_key
       chain_hash[:secret_name] = ciID + "_intermediates"
       secrets.push(chain_hash)
     else
@@ -45,8 +67,8 @@
 
 
     key_hash = {}
-    if !node[:workorder][:rfcCi][:ciAttributes][:key].nil? && !node[:workorder][:rfcCi][:ciAttributes][:key].empty?
-      key_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:key]
+    if !cert_key.nil? && !cert_key.empty?
+      key_hash[:content] = cert_key
       key_hash[:secret_name] = ciID +"_privatekey"
       secrets.push(key_hash)
     else
@@ -54,16 +76,17 @@
     end
 
     passphrase_hash = {}
-    if !node[:workorder][:rfcCi][:ciAttributes][:passphrase].nil? && !node[:workorder][:rfcCi][:ciAttributes][:passphrase].empty?
-     passphrase_hash[:content] = node[:workorder][:rfcCi][:ciAttributes][:passphrase]
+    if !cert_passphrase.nil? && !cert_passphrase.empty?
+     passphrase_hash[:content] = cert_passphrase
       passphrase_hash[:secret_name] = ciID + "_privatekey_passphrase"
       secrets.push(passphrase_hash)
     end
 
     node.set["secrets_hash"] =  secrets
     node.set["cert_container_name"] = ciID + "_tls_cert_container"
-    secrets
 
+    end
+    secrets
   end
 
   def replace_acl(name, userlist, type)

@@ -18,3 +18,9 @@ Chef::Log.info("end time " + Time.now.to_s)
 total_time = Time.now - start_time
 Chef::Log.info("Total time to delete " + total_time.to_s)
 Chef::Log.info("Exiting octavia-lbaas delete recipe.")
+
+
+#if key-managment service barbican is present in the workload , invoke the barbican::delete recipe here
+if node[:workorder][:services].has_key?("keymanagement")
+  include_recipe "barbican::delete"
+end

@@ -166,8 +166,8 @@ class SecretManager
           return false
         end
 
-      else
-        raise "Cannot create container, container with name #{container_name} already exists."
+        else
+          Chef::Log.info("Cannot create container, container with name #{container_name} already exists.Using the existing container ...")
       end
       else
 

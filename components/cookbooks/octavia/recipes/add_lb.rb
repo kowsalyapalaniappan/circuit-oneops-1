@@ -10,6 +10,7 @@ require File.expand_path('../../libraries/utils', __FILE__)
 require File.expand_path('../../../barbican/libraries/barbican_utils', __FILE__)
 require File.expand_path('../../../barbican/libraries/secret_manager', __FILE__)
 #-------------------------------------------------------
+
 lb_attributes = node[:workorder][:rfcCi][:ciAttributes]
 cloud_name = node[:workorder][:cloud][:ciName]
 service_lb_attributes = node[:workorder][:services][:slb][cloud_name][:ciAttributes]
@@ -20,6 +21,13 @@ persistence_type = lb_attributes[:persistence_type]
 Chef::Log.info("enabled networks: #{service_lb_attributes[:enabled_networks]} ")
 
 subnet_id = select_provider_network_to_use(tenant, service_lb_attributes[:enabled_networks])
+
+Chef::Log.info("node:")
+Chef::Log.info(service_lb_attributes.inspect)
+#if key-managment service barbican is present in the workload , invoke the barbican::add recipe here
+if node[:workorder][:services].has_key?("keymanagement")
+  include_recipe "barbican::add"
+end
 
 barbican_container_name = get_barbican_container_name()
 connection_limit = (lb_attributes[:connection_limit]).to_i
