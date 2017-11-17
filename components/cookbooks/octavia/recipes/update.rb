@@ -34,7 +34,7 @@ lb_name = node[:lb_name]
 config_items_changed= node[:workorder][:rfcCi][:ciBaseAttributes] # config_items_changed is empty if there no configuration change in lb component
 
 #if key-management service barbican is present in the workload , invoke the barbican::update recipe here
-if node[:workorder][:services].has_key?("keymanagement")
+if node[:workorder][:services].has_key?("keymanagement")  && node[:workorder][:services][:keymanagement][cloud_name][:ciClassName] =~ /Barbican/
   certificate_payload = node.workorder.payLoad.DependsOn.select { |d| d[:ciClassName] =~ /Certificate/ }
   certificate_payload.each do |cert|
     if cert[:rfcAction] == "replace"

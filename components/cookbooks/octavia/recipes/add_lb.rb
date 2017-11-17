@@ -22,10 +22,9 @@ Chef::Log.info("enabled networks: #{service_lb_attributes[:enabled_networks]} ")
 
 subnet_id = select_provider_network_to_use(tenant, service_lb_attributes[:enabled_networks])
 
-Chef::Log.info("node:")
-Chef::Log.info(service_lb_attributes.inspect)
 #if key-managment service barbican is present in the workload , invoke the barbican::add recipe here
-if node[:workorder][:services].has_key?("keymanagement")
+if node[:workorder][:services].has_key?("keymanagement")  && node[:workorder][:services][:keymanagement][cloud_name][:ciClassName] =~ /Barbican/
+  include_recipe "barbican::delete"
   include_recipe "barbican::add"
 end
 

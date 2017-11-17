@@ -50,6 +50,8 @@ class LoadbalancerManager
       Chef::Log.error(e.message)
       if e.message =~ /already exist./
         raise("Cannot create Loadbalancer #{loadbalancer.label.name} already exist.")
+      elsif e.message =~ /InternalServerError/
+       raise("Certificate content maybe invalid , check the certificate content and retry. ")
       end
       Chef::Log.error(e.backtrace.inspect)
       delete_loadbalancer(loadbalancer.label.name)
