@@ -147,9 +147,9 @@ attribute 'required_availability_zone',
 
 attribute 'connection_limit',
           :description => "Connection Limit",
-          :default => "-1",
+          :default => "2000",
           :format => {
-              :help => 'Applicable only for software loadbalancers. The maximum number of connections per second allowed for the vip. Valid values: a positive integer or -1 for unlimited (default).',
+              :help => 'Applicable only for software loadbalancers. The maximum number of connections per second allowed for the vip. Valid values: a positive integer.',
               :category => '1.Global',
     }
 
