@@ -7,7 +7,6 @@ require "#{COOKBOOKS_PATH}/azure_base/test/integration/spec_utils"
 
 provider = SpecUtils.new($node).get_provider
 if provider =~ /azure/
-  require "#{COOKBOOKS_PATH}/azure_base/test/integration/azure_spec_utils"
   Dir.glob("#{AZURE_TESTS_PATH}/*.rb").each {|tst| require tst}
 end
 
