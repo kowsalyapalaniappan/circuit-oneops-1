@@ -14,7 +14,6 @@ require File.expand_path('../../../../../../libraries/requests/lbaas/health_moni
 require File.expand_path('../../../../../../libraries/models/tenant_model', __FILE__)
 require File.expand_path('../../../../../../libraries/loadbalancer_manager', __FILE__)
 require File.expand_path('../../../../../../libraries/network_manager', __FILE__)
-
 require File.expand_path('../../../../../../libraries/utils', __FILE__)
 
 
@@ -59,9 +58,7 @@ describe 'octavia SLB' do
   it 'should have right frontend and backend ports on listeners' do
 
     listeners_users_input = @spec_utils.build_listener_from_wo()
-
     lb_details = @spec_utils.get_loadbalancer_details()
-
     puts lb_details.listeners.inspect
      flag= false
     lb_details.listeners.each do |listener|
@@ -73,10 +70,7 @@ describe 'octavia SLB' do
       end
       end
       expect(flag).to eq(true)
-
     end
-
-
   end
 
   it 'should have right frontend and backend protocols on listeners' do
@@ -92,28 +86,19 @@ describe 'octavia SLB' do
        expect(lb_details.listeners[0].protocol).to eq("TERMINATED_HTTPS")
        expect(lb_details.listeners[0].pool.members[0].protocol).to eq(listeners[0].iprotocol)
       end
-
     end
-
-
   end
 
   it 'should have right number of members' do
 
 
     service_lb_attributes = @spec_utils.get_service_metadata()
-
     tenant = TenantModel.new(service_lb_attributes[:endpoint],service_lb_attributes[:tenant],
                              service_lb_attributes[:username],service_lb_attributes[:password])
-
     subnet_id = select_provider_network_to_use(tenant, service_lb_attributes[:enabled_networks])
-
     lb_details = @spec_utils.get_loadbalancer_details()
-
     members = @spec_utils.initialize_members(subnet_id, 8080)
-
     puts lb_details.listeners.inspect
-
     expect(lb_details.listeners[0].pool.members.count).to eq(members.count)
 
 
@@ -121,11 +106,8 @@ describe 'octavia SLB' do
 
   it 'should have barbican container ref if vprotocol is terminated https' do
 
-
     listeners_users_input = @spec_utils.build_listener_from_wo()
-
     lb_details = @spec_utils.get_loadbalancer_details()
-
     puts lb_details.listeners.inspect
     flag= false
     lb_details.listeners.each do |listener|
