@@ -37,6 +37,8 @@ class ListenerDao
       listener.label.description = (listener_dto['description'])
       listener.connection_limit = (listener_dto['connection_limit'])
       listener.admin_state_up = (listener_dto['admin_state_up'])
+      listener.tls_container  = (listener_dto['default_tls_container_ref'])
+
 
       return listener
     end
