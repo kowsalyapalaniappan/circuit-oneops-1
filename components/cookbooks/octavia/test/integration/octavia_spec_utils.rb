@@ -15,8 +15,16 @@ require File.expand_path("#{OCTAVIA_PATH}/libraries/requests/lbaas/member_reques
 require File.expand_path("#{OCTAVIA_PATH}/libraries/requests/lbaas/health_monitor_request", __FILE__)
 require File.expand_path("#{OCTAVIA_PATH}/libraries/models/tenant_model", __FILE__)
 require File.expand_path("#{OCTAVIA_PATH}/libraries/loadbalancer_manager", __FILE__)
+require File.expand_path("#{OCTAVIA_PATH}/libraries/member_manager", __FILE__)
+
 
 class Octavia_spec_utils
+  module LbAlgorthm
+    ROUND_ROBIN = 'ROUND_ROBIN'
+    LEAST_CONNECTIONS = 'LEAST_CONNECTIONS'
+    SOURCE_IP = 'SOURCE_IP'
+  end
+
   def initialize(node)
     @node=node
   end
@@ -56,8 +64,6 @@ class Octavia_spec_utils
     end
 
     @node.set["lb_name"] = [platform_name, env_name, assembly_name, org_name, gslb_site_dns_id, dns_zone].join(".") +'-' + ci[:ciId].to_s + "-lb"
-
-    puts @node.lb_name
     @node.lb_name
   end
 
@@ -99,19 +105,15 @@ class Octavia_spec_utils
         JSON.parse(dep['ciAttributes']['node_ports']).each_pair do |internal_port,external_port|
           override_iport_map[internal_port] = external_port
         end
-        puts "override_iport_map: #{override_iport_map.inspect}"
       end
     end
 
     listeners_list = []
     listeners = JSON.parse(ci[:ciAttributes][:listeners])
-    puts "listeners:"
-    puts listeners.inspect
     i=0
     listeners.each do |l|
 
       acl = ''
-      puts l.inspect
       lb_attrs = l.split(" ")
       vproto = lb_attrs[0]
       vport = lb_attrs[1]
@@ -276,6 +278,78 @@ def get_barbican_container_name()
     return cert_name
   end
 end
+
+  def get_lb_attributes()
+    lb_attributes = @node[:workorder][:rfcCi][:ciAttributes]
+    lb_attributes
+  end
+
+  def initialize_health_monitor(iprotocol, ecv_map, lb_name, iport)
+    health_monitor = HealthMonitorModel.new(iprotocol, 5, 2, 3)
+    health_monitor.label.name=lb_name + '-ecv-' + iport
+
+    begin
+      ecv_map_list = JSON.parse(ecv_map)
+      ecv_map_list.each do |ecv_port, ecv_path|
+        if ecv_port == iport
+          ecv_method, ecv_url = ecv_path.split(' ', 2)
+          health_monitor.http_method=ecv_method
+          health_monitor.url_path=ecv_url
+          return health_monitor
+        end
+      end
+      return health_monitor
+    end
+  end
+
+  def underscore(input_string)
+    input_string.gsub(/::/, '/').
+        gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
+        gsub(/([a-z\d])([A-Z])/,'\1_\2').
+        tr("-", "_").
+        downcase
+  end
+
+
+  def validate_lb_algorithm(lb_algorithm)
+    two_word_pascalcase = '([A-Z][a-z0-9]+){2,}'
+
+    if lb_algorithm.match(two_word_pascalcase)
+      lb_algorithm_upcase = underscore(lb_algorithm).upcase
+    elsif lb_algorithm.count(' ') > 0
+      lb_algorithm_upcase = lb_algorithm.tr(' ', '_').upcase
+    elsif lb_algorithm.include? 'round'
+      lb_algorithm_upcase = 'ROUND_ROBIN'
+    elsif lb_algorithm.include? 'least'
+      lb_algorithm_upcase = 'LEAST_CONNECTIONS'
+    elsif lb_algorithm.include? 'source'
+      lb_algorithm_upcase = 'SOURCE_IP'
+    else
+      lb_algorithm_upcase = lb_algorithm
+    end
+
+    if lb_algorithm_upcase == LbAlgorthm::ROUND_ROBIN || lb_algorithm_upcase == LbAlgorthm::LEAST_CONNECTIONS || lb_algorithm_upcase == LbAlgorthm::SOURCE_IP
+      return lb_algorithm_upcase
+    else
+      fail ArgumentError, 'lb_algorithm is invalid'
+    end
+  end
+
+def get_compute_list_from_wo()
+  computes = @node[:workorder][:payLoad][:DependsOn].select { |d| d[:ciClassName] =~ /Compute/ }
+  computes
+
+end
+
+  def is_member_exist(pool_id, ip_address)
+
+    service_lb_attributes = get_service_metadata()
+    tenant = TenantModel.new(service_lb_attributes[:endpoint],service_lb_attributes[:tenant],
+                             service_lb_attributes[:username],service_lb_attributes[:password])
+    member_manager = MemberManager.new(tenant)
+    return (member_manager.is_member_exist(pool_id,ip_address))
+  end
+
 
 end
 

@@ -21,10 +21,18 @@ verifier:
 platforms:
   - name: centos-7.2
 suites:
-  - name: add
+  - name: add-basic-lb
     verifier:
       patterns:
-      - test/integration/add/serverspec/add_spec.rb
+      - test/integration/add/serverspec/add_basic_lb_spec.rb
+  - name: add-sslpassthru-lb
+    verifier:
+      patterns:
+      - test/integration/add/serverspec/add_ssl_passthru_lb_spec.rb
+  - name: add-tlsterminated-lb
+    verifier:
+      patterns:
+      - test/integration/add/serverspec/add_tls_terminated_lb_spec.rb
   - name: delete
     verifier:
       patterns:
