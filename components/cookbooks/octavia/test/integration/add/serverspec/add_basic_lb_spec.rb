@@ -7,6 +7,3 @@ require "#{COOKBOOKS_PATH}/octavia/test/integration/octavia_spec_utils.rb"
 
 require "#{COOKBOOKS_PATH}/octavia/test/integration/add/serverspec/tests/add_basic_lb.rb"
 
-#run the tests
-#tsts = File.expand_path("tests", File.dirname(__FILE__))
-#Dir.glob("#{tsts}/add.rb").each {|tst| require tst}
