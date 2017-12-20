@@ -68,11 +68,6 @@ class Octavia_spec_utils
   end
 
   def build_listener_from_wo()
-
-
-
-
-
     env_name = @node.workorder.payLoad.Environment[0]["ciName"]
     asmb_name = @node.workorder.payLoad.Assembly[0]["ciName"]
     org_name = @node.workorder.payLoad.Organization[0]["ciName"]
@@ -223,61 +218,57 @@ class Octavia_spec_utils
     loadbalancer
   end
 
-def get_listeners_from_wo
-  listeners = Array.new
+  def get_listeners_from_wo
+    listeners = Array.new
 
-  if @node["loadbalancers"]
-    raw_data = @node['loadbalancers']
-    raw_data.each do |listener|
-      listeners.push(listener)
+    if @node["loadbalancers"]
+      raw_data = @node['loadbalancers']
+      raw_data.each do |listener|
+        listeners.push(listener)
+      end
+    end
+
+    return listeners
+  end
+
+  def get_dc_lb_names()
+    platform_name = @node.workorder.box.ciName
+    environment_name = @node.workorder.payLoad.Environment[0]["ciName"]
+    assembly_name = @node.workorder.payLoad.Assembly[0]["ciName"]
+    org_name = @node.workorder.payLoad.Organization[0]["ciName"]
+
+    cloud_name = @node.workorder.cloud.ciName
+    dc = @node.workorder.services["slb"][cloud_name][:ciAttributes][:gslb_site_dns_id]+"."
+    dns_zone = @node.workorder.services["dns"][cloud_name][:ciAttributes][:zone]
+    dc_dns_zone = dc + dns_zone
+    platform_ciId = @node.workorder.box.ciId.to_s
+
+    vnames = { }
+    listeners = build_listener_from_wo()
+    listeners.each do |listener|
+      frontend_port = listener[:vport]
+
+      service_type = listener[:vprotocol]
+      if service_type == "HTTPS"
+        service_type = "SSL"
+      end
+      dc_lb_name = [platform_name, environment_name, assembly_name, org_name, dc_dns_zone].join(".") +
+          '-'+service_type+"_"+frontend_port+"tcp-" + platform_ciId + "-lb"
+
+      vnames[dc_lb_name] = dc_lb_name
+    end
+
+    return vnames
+  end
+
+  def get_barbican_container_name()
+    certs = @node.workorder.payLoad.DependsOn.select { |d| d["ciClassName"] =~ /Certificate/ }
+    certs.each do |cert|
+      cert_name =  cert[:ciId].to_s + "_tls_cert_container"
+      Chef::Log.info("tls cert name : #{cert_name}")
+      return cert_name
     end
   end
-
-  return listeners
-end
-
-
-
-
-
-def get_dc_lb_names()
-  platform_name = @node.workorder.box.ciName
-  environment_name = @node.workorder.payLoad.Environment[0]["ciName"]
-  assembly_name = @node.workorder.payLoad.Assembly[0]["ciName"]
-  org_name = @node.workorder.payLoad.Organization[0]["ciName"]
-
-  cloud_name = @node.workorder.cloud.ciName
-  dc = @node.workorder.services["slb"][cloud_name][:ciAttributes][:gslb_site_dns_id]+"."
-  dns_zone = @node.workorder.services["dns"][cloud_name][:ciAttributes][:zone]
-  dc_dns_zone = dc + dns_zone
-  platform_ciId = @node.workorder.box.ciId.to_s
-
-  vnames = { }
-  listeners = get_listeners_from_wo()
-  listeners.each do |listener|
-    frontend_port = listener[:vport]
-
-    service_type = listener[:vprotocol]
-    if service_type == "HTTPS"
-      service_type = "SSL"
-    end
-    dc_lb_name = [platform_name, environment_name, assembly_name, org_name, dc_dns_zone].join(".") +
-        '-'+service_type+"_"+frontend_port+"tcp-" + platform_ciId + "-lb"
-
-    vnames[dc_lb_name] = nil
-  end
-
-  return vnames
-end
-
-def get_barbican_container_name()
-  certs = @node.workorder.payLoad.DependsOn.select { |d| d["ciClassName"] =~ /Certificate/ }
-  certs.each do |cert|
-    cert_name =  cert[:ciId].to_s + "_tls_cert_container"
-    Chef::Log.info("tls cert name : #{cert_name}")
-    return cert_name
-  end
-end
 
   def get_lb_attributes()
     lb_attributes = @node[:workorder][:rfcCi][:ciAttributes]
@@ -335,11 +326,11 @@ end
     end
   end
 
-def get_compute_list_from_wo()
-  computes = @node[:workorder][:payLoad][:DependsOn].select { |d| d[:ciClassName] =~ /Compute/ }
-  computes
+  def get_compute_list_from_wo()
+    computes = @node[:workorder][:payLoad][:DependsOn].select { |d| d[:ciClassName] =~ /Compute/ }
+    computes
 
-end
+  end
 
   def is_member_exist(pool_id, ip_address)
 
@@ -350,6 +341,66 @@ end
     return (member_manager.is_member_exist(pool_id,ip_address))
   end
 
+  # Migration
+  def get_current_lb_service_type()
+    service_type = @node[:workorder][:rfcCi][:ciAttributes][:lb_service_type]
+    service_type
+  end
+
+  def get_old_lb_service_type()
+    service_type = @node[:workorder][:rfcCi][:ciBaseAttributes][:lb_service_type]
+    service_type
+  end
+
+  def gen_ns_conn(cloud_service,host)
+    encoded = Base64.encode64("#{cloud_service[:username]}:#{cloud_service[:password]}").gsub("\n","")
+    conn = Excon.new(
+        'https://'+host,
+        :headers => {
+            'Authorization' => "Basic #{encoded}",
+            'Content-Type' => 'application/x-www-form-urlencoded'
+        },
+        :ssl_verify_peer => false)
+    return conn
+  end
+
+  def check_for_lbvserver(conn,lbvserver_name)
+    resp_obj = JSON.parse(conn.request(
+        :method => :get,
+        :path => "/nitro/v1/config/lbvserver/#{lbvserver_name}").body)
+    Chef::Log.info("get lbvserver response: #{resp_obj.inspect}")
+    if resp_obj["message"] =~ /No such resource/
+      return false
+    end
+    return true
+  end
+
+  def get_ns_loadbalancer_details()
+    cloud_name = get_cloud_name()
+    cloud_service = @node[:workorder][:services][:lb][cloud_name][:ciAttributes]
+    az_map = JSON.parse(cloud_service[:availability_zones])
+    found = false
+    vnames = get_dc_lb_names()
+    puts "VNAMES : #{vnames}"
+    az_map.keys.each do |check_az|
+      host = az_map[check_az]
+      conn = gen_ns_conn(cloud_service,host)
+      vnames.keys.each do |vname|
+        if check_for_lbvserver(conn,vname)
+          puts "found netscaler LB"
+          found = true
+          break
+        end
+      end
+      break if found
+    end
+
+    if found
+      return true
+    else
+      return false
+    end
+  end
 
 end
 
