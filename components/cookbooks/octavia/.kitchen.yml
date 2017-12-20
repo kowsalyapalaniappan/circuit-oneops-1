@@ -46,3 +46,7 @@ suites:
     verifier:
       patterns:
       - test/integration/update/serverspec/update_spec.rb
+  - name: migrate
+    verifier:
+      patterns:
+      - test/integration/migrate/serverspec/migrate_spec.rb
