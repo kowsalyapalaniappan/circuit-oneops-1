@@ -23,7 +23,6 @@ describe 'octavia SLB' do
   end
 
   it 'should exist' do
-
     service_lb_attributes = @spec_utils.get_service_metadata()
     tenant = TenantModel.new(service_lb_attributes[:endpoint],service_lb_attributes[:tenant],
                              service_lb_attributes[:username],service_lb_attributes[:password])
@@ -37,18 +36,12 @@ describe 'octavia SLB' do
     loadbalancer=lb_manager.get_loadbalancer(lb_id)
     expect(loadbalancer).not_to be_nil
     expect(loadbalancer.label.name).to eq(@spec_utils.build_n_return_lb_name)
-
   end
 
   it 'should have correct number of listeners' do
-
     listeners = @spec_utils.build_listener_from_wo()
-
     lb_details = @spec_utils.get_loadbalancer_details()
-
     expect(lb_details.listeners.count).to eq(listeners.count)
-
-
   end
 
 
@@ -56,14 +49,14 @@ describe 'octavia SLB' do
 
     listeners_users_input = @spec_utils.build_listener_from_wo()
     lb_details = @spec_utils.get_loadbalancer_details()
-     flag= false
+    flag= false
     lb_details.listeners.each do |listener|
       flag= false
       listeners_users_input.each do | l|
-      if((listener.protocol_port.to_s) == (l.vport)) && ((listener.pool.members[0].protocol_port.to_s) == (l.iport))
-        flag = true
-        break
-      end
+        if((listener.protocol_port.to_s) == (l.vport)) && ((listener.pool.members[0].protocol_port.to_s) == (l.iport))
+          flag = true
+          break
+        end
       end
       expect(flag).to eq(true)
     end
@@ -78,8 +71,8 @@ describe 'octavia SLB' do
 
     if listeners.count == 1
       if (listeners[0].vprotocol == "TERMINATED_HTTPS" || listeners[0].vprotocol == 'HTTPS') && listeners[0].vprotocol == "http"
-       expect(lb_details.listeners[0].protocol).to eq("TERMINATED_HTTPS")
-       expect(lb_details.listeners[0].pool.members[0].protocol).to eq(listeners[0].iprotocol)
+        expect(lb_details.listeners[0].protocol).to eq("TERMINATED_HTTPS")
+        expect(lb_details.listeners[0].pool.members[0].protocol).to eq(listeners[0].iprotocol)
       end
     end
   end
@@ -109,12 +102,12 @@ describe 'octavia SLB' do
         Chef::Log.info("ipv6 address: #{new_ip_address}")
       end
       expect(@spec_utils.is_member_exist(lb_details.listeners[0].pool.id, new_ip_address)).to be(true)
-      end
+    end
 
   end
 
 
-    it 'should have lb algorithm selected by the user' do
+  it 'should have lb algorithm selected by the user' do
 
     lb_details = @spec_utils.get_loadbalancer_details()
     lb_attributes = @spec_utils.get_lb_attributes()
@@ -129,33 +122,31 @@ describe 'octavia SLB' do
     expect(lb_details.listeners[0].connection_limit.to_s).to eq(lb_attributes[:connection_limit])
   end
 
-it 'should have session stickiness and persistent type selected by the user' do
-  lb_details = @spec_utils.get_loadbalancer_details()
-  lb_attributes = @spec_utils.get_lb_attributes()
-  stickiness = lb_attributes[:stickiness]
-  persistence_type = lb_attributes[:persistence_type]
-  session_persistence = lb_details.listeners[0].pool.session_persistence
- if stickiness
-   flag= false
-   if persistence_type == "SOURCE_IP"
-    if session_persistence["type"] =~ /source/
-     flag = true
+  it 'should have session stickiness and persistent type selected by the user' do
+    lb_details = @spec_utils.get_loadbalancer_details()
+    lb_attributes = @spec_utils.get_lb_attributes()
+    stickiness = lb_attributes[:stickiness]
+    persistence_type = lb_attributes[:persistence_type]
+    session_persistence = lb_details.listeners[0].pool.session_persistence
+    if stickiness
+      flag= false
+      if persistence_type == "SOURCE_IP"
+        if session_persistence["type"] =~ /source/
+          flag = true
+        end
+      elsif session_persistence["type"] == "HTTP_COOKIE" || session_persistence["type"] == "APP_COOKIE"
+        if session_persistence["type"] =~ /cookie/
+          flag = true
+        end
+        expect(flag).to be(true)
+      end
+    else
+      expect(lb_details.listeners[0].pool.session_persistence).to be_nil
+
     end
-   elsif session_persistence["type"] == "HTTP_COOKIE" || session_persistence["type"] == "APP_COOKIE"
-     if session_persistence["type"] =~ /cookie/
-       flag = true
-     end
-   expect(flag).to be(true)
-   end
- else
-   expect(lb_details.listeners[0].pool.session_persistence).to be_nil
-
-end
-
-end
+  end
 
   it 'should have healthmonitor configured by the user' do
-
 
     service_lb_attributes = @spec_utils.get_service_metadata()
     tenant = TenantModel.new(service_lb_attributes[:endpoint],service_lb_attributes[:tenant], service_lb_attributes[:username],service_lb_attributes[:password])
@@ -170,10 +161,8 @@ end
     lb_details.listeners.each do |listener|
       flag= false
       listeners_users_input.each do | l|
-          hm = @spec_utils.initialize_health_monitor(l.iprotocol,lb_attributes[:ecv_map], lb_name, l.iport)
-          members = @spec_utils.initialize_members(subnet_id, l.iport)
-
-
+        hm = @spec_utils.initialize_health_monitor(l.iprotocol,lb_attributes[:ecv_map], lb_name, l.iport)
+        members = @spec_utils.initialize_members(subnet_id, l.iport)
       end
     end
     expect(lb_details.listeners[0].pool.health_monitor).not_to be_nil
@@ -181,8 +170,5 @@ end
     expect(lb_details.listeners[0].pool.health_monitor.http_method).to eq(hm.http_method)
     expect(lb_details.listeners[0].pool.health_monitor.url_path).to eq(hm.url_path)
     expect(lb_details.listeners[0].pool.members[0].protocol_port.to_s).to eq(members[0].protocol_port)
-
   end
-
-
 end
